@@ -1,5 +1,6 @@
 # PT-Clone
-![Alt Text](https://publiczeus.com/devlin/PTIntro2.gif)
+Inline-style: 
+![alt text](https://publiczeus.com/devlin/PTIntro.gif "Gameplay")
 
 A Unity Project inspired by the playable teaser for SIlent Hills.
 
