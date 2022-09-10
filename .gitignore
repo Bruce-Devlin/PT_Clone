@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+##Build Folder
+/#tmp_Build/
+
 # User-specific files
 *.rsuser
 *.suo

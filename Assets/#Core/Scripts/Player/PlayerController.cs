@@ -41,6 +41,8 @@ public class PlayerController : MonoBehaviour
     public PathManager pathManager;
 
     public Transform playerHead;
+    public Transform playerCamera;
+
     public Transform playerBody;
     public GameObject playerFlashlight;
     public SadisticAI sadisticAI;
@@ -86,7 +88,7 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        sensitivityY = sensitivityX * 2;
+        sensitivityY = sensitivityX;
         if (canLook)
         {
             rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
@@ -94,20 +96,22 @@ public class PlayerController : MonoBehaviour
 
             rotationX += Input.GetAxis("Mouse X") * sensitivityX;
 
-            if (playerHead.transform.eulerAngles.x != -rotationY)
+            //Camera LERP
+            if (playerCamera.transform.eulerAngles.x != -rotationY)
             {
                 Vector3 lerpRotateY =
                     new Vector3(
                         Mathf.LerpAngle(
-                            playerHead.transform.localEulerAngles.x,
+                            playerCamera.transform.eulerAngles.x,
                             -rotationY,
                             sensitivityY * Time.deltaTime
                             ),
                         rotationX,
                         0);
-                playerHead.eulerAngles = lerpRotateY;
+                playerCamera.eulerAngles = lerpRotateY;
             }
 
+            //Body Lerp
             if (transform.eulerAngles.y != rotationX)
             {
                 Vector3 lerpRotateX =
@@ -211,25 +215,12 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (walking() && !playingFootsteps)
-        {
-            pathManager.Log("Walking...");
-            playingFootsteps = true;
-            StartCoroutine(PlayFootSteps());
-        }
-        else if (!walking() && playingFootsteps)
-        {
-            playingFootsteps = false;
-            footSteps.Stop();
-            pathManager.Log("Stopped walking...");
-        }
-
         if (playerFlashlight.transform.Find("Bulb").GetComponent<Light>().enabled)
         {
             Vector3 currentAngle = new Vector3(
-             Mathf.LerpAngle(playerFlashlight.transform.eulerAngles.x, playerHead.transform.eulerAngles.x, Time.deltaTime * 5),
-             Mathf.LerpAngle(playerFlashlight.transform.eulerAngles.y, playerHead.transform.eulerAngles.y, Time.deltaTime * 5),
-             Mathf.LerpAngle(playerFlashlight.transform.eulerAngles.z, playerHead.transform.eulerAngles.z, Time.deltaTime * 5));
+             Mathf.LerpAngle(playerFlashlight.transform.eulerAngles.x, playerCamera.transform.eulerAngles.x, Time.deltaTime * sensitivityX / 2),
+             Mathf.LerpAngle(playerFlashlight.transform.eulerAngles.y, playerCamera.transform.eulerAngles.y, Time.deltaTime * sensitivityX / 2),
+             Mathf.LerpAngle(playerFlashlight.transform.eulerAngles.z, playerCamera.transform.eulerAngles.z, Time.deltaTime * sensitivityX / 2));
 
             playerFlashlight.transform.eulerAngles = currentAngle;
         }
