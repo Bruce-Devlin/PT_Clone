@@ -3,6 +3,9 @@ A Unity Project inspired by the playable teaser for SIlent Hills.
 
 This is a looped experience which combines atmosphere and a Sadistic AI that constantly tries to spook you until inevaitably; it kills you.
 
+## The Story
+TBD
+
 ## Core Components
 These are key parts of the game containing both design and functionally.
 
