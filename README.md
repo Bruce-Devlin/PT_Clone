@@ -1,7 +1,7 @@
 # PT-Clone
 ![alt text](https://publiczeus.com/devlin/PTIntro.gif "Gameplay")
 
-A Unity Project inspired by the playable teaser for SIlent Hills.
+A Unity Project inspired by the playable teaser for Silent Hills.
 
 This is a looped experience which combines atmosphere and a Sadistic AI that constantly tries to spook you until inevaitably; it kills you.
 
