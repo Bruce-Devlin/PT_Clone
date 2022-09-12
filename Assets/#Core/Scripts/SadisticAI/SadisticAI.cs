@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -78,7 +79,7 @@ public class SadisticAI : MonoBehaviour
     public GameObject interact_ExtraDoor_01;
     public GameObject interact_Phone_01;
     public List<GameObject> interact_CeilingLights_01;
-    public List<GameObject> interact_CeilingLights_02;
+    public GameObject interact_ShadowWalkby_01;
 
     [Header("Path 2")]
     public GameObject interact_FrontDoor_02;
@@ -86,6 +87,8 @@ public class SadisticAI : MonoBehaviour
     public GameObject interact_Path2Door_02;
     public GameObject interact_ExtraDoor_02;
     public GameObject interact_Phone_02;
+    public List<GameObject> interact_CeilingLights_02;
+    public GameObject interact_ShadowWalkby_02;
 
     [Space(10)]
     ///
@@ -133,7 +136,6 @@ public class SadisticAI : MonoBehaviour
     void AiThink()
     {
         if (debug) pathManager.Log("SadisticAI: Player Loops: " + playerLoops + " Players Current Path: " + currentPath);
-
         if (playerLoops < 2 || pathManager.preventProgress)
         {
             if (debug) pathManager.Log("Either player is below 2 loops or preventProgress it true, doing nothing.");
@@ -167,7 +169,7 @@ public class SadisticAI : MonoBehaviour
     }
     #endregion
 
-    #region Scares
+    #region Scare Handler
     void ScareHandler()
     {
         if (debug) pathManager.Log("SadisticAI: Deciding how to scare the player...");
@@ -210,14 +212,10 @@ public class SadisticAI : MonoBehaviour
 
                 TurnOffLights();
             }
-            else if (currentPath == 2)
+            else
             {
                 if (debug) pathManager.Log("SadisticAI: Doing something somewhere... (Path 2)");
                 TurnOffLights();
-            }
-            else
-            {
-
             }
         }
     }
@@ -227,35 +225,33 @@ public class SadisticAI : MonoBehaviour
     bool lightsOff = false;
     public void TurnOffLights()
     {
-        if (!lightsOff)
+        if (!playerController.canUseFlashlight)
         {
-            lightsOff = true;
             playerController.canUseFlashlight = true;
-            StartCoroutine(playerController.ShowHint("I'm sure I got a flashlight here somewhere..."));
+            StartCoroutine(playerController.ShowHint("Press F for flashlight"));
+        }
+        if (debug) pathManager.Log("Bursting a Light...");
 
-            playerController.playerFlashlight.transform.Find("Bulb").GetComponent<Light>().enabled = true;
-            playerController.playerFlashlight.SetActive(true);
+        List<GameObject> lights = new List<GameObject>();
 
-            if (debug) pathManager.Log("Bursting Lights...");
-            foreach (GameObject obj in interact_CeilingLights_01)
+        foreach (GameObject _tmpLight in interact_CeilingLights_01)
+        {
+            if (!_tmpLight.GetComponent<CeilingLights>().burst)
             {
-                if (debug) pathManager.Log("Object: " + obj.name);
-                if (obj.name == "Ceiling Light")
-                {
-                    obj.GetComponent<CeilingLights>().shouldBurst = true;
-                }
-                else if (obj.name.StartsWith("Lamp")) obj.GetComponent<Light>().enabled = false;
-            }
-            foreach (GameObject obj in interact_CeilingLights_02)
-            {
-                if (debug) pathManager.Log("Object: " + obj.name);
-                if (obj.name == "Ceiling Light")
-                {
-                    obj.GetComponent<CeilingLights>().shouldBurst = true;
-                }
-                else if (obj.name.StartsWith("Lamp")) obj.GetComponent<Light>().enabled = false;
+                lights.Add(_tmpLight);
             }
         }
+
+        int choosenLight = random.Next(0, lights.Count);
+
+        Tuple<GameObject, GameObject> lightsToBurst =
+            new Tuple<GameObject, GameObject>(
+                interact_CeilingLights_01[choosenLight],
+                interact_CeilingLights_02[choosenLight]
+                );
+
+        lightsToBurst.Item1.GetComponent<CeilingLights>().shouldBurst = true;
+        lightsToBurst.Item2.GetComponent<CeilingLights>().shouldBurst = true;
     }
 
     public void PhoneRing()
@@ -272,6 +268,18 @@ public class SadisticAI : MonoBehaviour
             interact_Phone_02.GetComponent<Telephone>().shouldRing = true;
             interact_Phone_02.GetComponent<Telephone>().callSound = audio_creepyBreathing;
             StartCoroutine(playerController.ShowHint("what the fuck, is that a phone ringing?"));
+        }
+    }
+
+    public void ShadowWalkBy()
+    { 
+        if (currentPath == 1)
+        {
+            interact_ShadowWalkby_01.GetComponent<MeshRenderer>().enabled = true;
+        }
+        else
+        {
+
         }
     }
 

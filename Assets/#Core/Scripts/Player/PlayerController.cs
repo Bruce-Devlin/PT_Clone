@@ -22,12 +22,14 @@ public class PlayerController : MonoBehaviour
     [Header("Player Settings")]
     [Tooltip("The Player's movement speed. (default: 5)")]
     public bool canUseFlashlight = false;
+    public bool canMove = true;
     public static float movementSpeed = 5.0f;
     float og_movementSpeed;
 
     public bool canLook = true;
     public float sensitivityX = 15F;
     float sensitivityY;
+    string cameraMovement = "";
 
     public float minimumX = -360F;
     public float maximumX = 360F;
@@ -78,7 +80,12 @@ public class PlayerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
+        if (canLook)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            cameraMovement = PlayerPrefs.GetString("CameraMovement");
+        }
+            
         // Make the rigid body not change rotation
         if (GetComponent<Rigidbody>())
             GetComponent<Rigidbody>().freezeRotation = true;
@@ -96,35 +103,48 @@ public class PlayerController : MonoBehaviour
 
             rotationX += Input.GetAxis("Mouse X") * sensitivityX;
 
-            //Camera LERP
-            if (playerCamera.transform.eulerAngles.x != -rotationY)
+            if (cameraMovement == "real")
             {
-                Vector3 lerpRotateY =
-                    new Vector3(
-                        Mathf.LerpAngle(
-                            playerCamera.transform.eulerAngles.x,
-                            -rotationY,
-                            sensitivityY * Time.deltaTime
-                            ),
-                        rotationX,
-                        0);
-                playerCamera.eulerAngles = lerpRotateY;
-            }
-
-            //Body Lerp
-            if (transform.eulerAngles.y != rotationX)
-            {
-                Vector3 lerpRotateX =
-                    new Vector3(
-                        0,
-                        Mathf.LerpAngle(
-                            transform.eulerAngles.y, 
+                //Camera LERP
+                if (playerCamera.transform.eulerAngles.x != -rotationY)
+                {
+                    Vector3 lerpRotateY =
+                        new Vector3(
+                            Mathf.LerpAngle(
+                                playerCamera.transform.eulerAngles.x,
+                                -rotationY,
+                                sensitivityY * Time.deltaTime
+                                ),
                             rotationX,
-                            sensitivityX * Time.deltaTime
-                            ),
-                        0);
-                transform.eulerAngles = lerpRotateX;
+                            0);
+                    playerCamera.eulerAngles = lerpRotateY;
+                }
+
+                //Body Lerp
+                if (transform.eulerAngles.y != rotationX)
+                {
+                    Vector3 lerpRotateX =
+                        new Vector3(
+                            0,
+                            Mathf.LerpAngle(
+                                transform.eulerAngles.y,
+                                rotationX,
+                                sensitivityX * Time.deltaTime
+                                ),
+                            0);
+                    transform.eulerAngles = lerpRotateX;
+                }
             }
+            else
+            {
+                rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
+                rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
+
+                rotationX += Input.GetAxis("Mouse X") * sensitivityX;
+
+                transform.Rotate(-transform.up * rotationX);
+            }
+            
         }
 
         if (debugCam)
@@ -177,7 +197,7 @@ public class PlayerController : MonoBehaviour
                 transform.Translate(Vector3.down * flySpeed);
             }
         }
-        else
+        else if (canMove)
         {
             if (Input.GetKey(KeyCode.W))
             {
@@ -191,12 +211,12 @@ public class PlayerController : MonoBehaviour
 
             if (Input.GetKey(KeyCode.A))
             {
-                transform.Translate(Vector3.left * Time.deltaTime * (movementSpeed / 3));
+                transform.Translate(Vector3.left * Time.deltaTime * (movementSpeed / 2));
             }
 
             if (Input.GetKey(KeyCode.D))
             {
-                transform.Translate(Vector3.right * Time.deltaTime * (movementSpeed / 3));
+                transform.Translate(Vector3.right * Time.deltaTime * (movementSpeed / 2));
             }
         }
     }
