@@ -7,6 +7,13 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+public class Scare
+{
+    public int id { get; set; }
+    public string name { get; set; }
+    public Action method { get; set; }
+}
+
 public class SadisticAI : MonoBehaviour
 {
     #region Variables
@@ -15,16 +22,16 @@ public class SadisticAI : MonoBehaviour
 
 
     // The Scene PathManager.
-    public PathManager pathManager;
+    [HideInInspector]public PathManager pathManager;
     bool debug;
+    [HideInInspector]public string status = "";
+    public bool triggerDebug = false;
 
     // The Player Controller.
     public PlayerController playerController;
 
     // How many loops the player has made.
     [HideInInspector]public int playerLoops = 0; // This is often used as a multiplier, the higher this number the higher all the other paramaters of the AI will be
-    // Which path the player is currently in.
-    [HideInInspector]public int currentPath = 0; // 1 || 2 (Current path the player is in)
 
     ///
     /// AI Settings
@@ -32,11 +39,15 @@ public class SadisticAI : MonoBehaviour
     [Header("AI Settings")]
 
     // How active the AI is
-    [Tooltip("0 - 100 | 0: AI Is inactive, 100: \"Fuck this\"")]
+    [Tooltip("0 - 100 | 0: AI Is inactive, 100: Active every chance it gets")]
+    public int activity = 5;
+
+    // How cruel the AI is
+    [Tooltip("0 - 100 | 0: AI will never hurt the player, 100: \"Fuck this\"")]
     public int cruelty = 5;
 
     // How dangerous the AI is to the Player
-    [Tooltip("0 - 100 | 0: Player is safe, 100: Player will be insta-killed")]
+    [Tooltip("0 - 100 | 0: Player is safe, 100: k???i????l???l??? ????t????h????e????? ?????p????l????a????y?????e?????r????")]
     public int danger = 0;
 
     // The timer used to dictate when the AI should think.
@@ -44,51 +55,41 @@ public class SadisticAI : MonoBehaviour
     public int aiThinkingTime = 30;
 
     // Random generator used to make things random.
-    public System.Random random = new System.Random();
+    public System.Random random;
+
+    public bool thinking = false;
 
     ///
     /// AI Player Triggers
     ///
     [Header("Player Triggers")]
 
-    [Header("Path 1")]
-    public PathTrigger trigger_FrontDoor_01;
-    private bool trigger_FrontDoor_01_Active = false;
-    public PathTrigger trigger_Table_01;
-    private bool trigger_Table_01_Active = false;
-    public PathTrigger trigger_ExtraDoor_01;
-    private bool trigger_ExtraDoor_01_Active = false;
+    public bool trigger_Enter_Active = false;
+    public bool trigger_Exit_Active = false;
 
-    [Header("Path 2")]
-    public PathTrigger trigger_FrontDoor_02;
-    private bool trigger_FrontDoor_02_Active = false;
-    public PathTrigger trigger_Table_02;
-    private bool trigger_Table_02_Active = false;
-    public PathTrigger trigger_ExtraDoor_02;
-    private bool trigger_ExtraDoor_02_Active = false;
+    PathTrigger trigger_FrontDoor;
+    private bool trigger_FrontDoor_Active = false;
+    PathTrigger trigger_Table;
+    private bool trigger_Table_Active = false;
+    PathTrigger trigger_ExtraDoor;
+    private bool trigger_ExtraDoor_Active = false;
 
     ///
     /// AI Interactables
     ///
     [Header("AI Interactables")]
 
-    [Header("Path 1")]
-    public GameObject interact_FrontDoor_01;
-    public GameObject interact_Path1Door_01;
-    public GameObject interact_Path2Door_01;
+    public GameObject interact_FrontDoor;
     public GameObject interact_ExtraDoor_01;
-    public GameObject interact_Phone_01;
-    public List<GameObject> interact_CeilingLights_01;
-    public GameObject interact_ShadowWalkby_01;
-
-    [Header("Path 2")]
-    public GameObject interact_FrontDoor_02;
-    public GameObject interact_Path1Door_02;
-    public GameObject interact_Path2Door_02;
     public GameObject interact_ExtraDoor_02;
-    public GameObject interact_Phone_02;
-    public List<GameObject> interact_CeilingLights_02;
-    public GameObject interact_ShadowWalkby_02;
+    public GameObject interact_ExtraDoor_03;
+    public GameObject interact_ExtraDoor_04;
+
+    public GameObject interact_Phone;
+    public List<GameObject> interact_CeilingLights;
+    public List<GameObject> interact_ExtraRooms;
+    public GameObject interact_CurrentExtraRoom;
+    public GameObject interact_ShadowWalkby;
 
     [Space(10)]
     ///
@@ -98,287 +99,403 @@ public class SadisticAI : MonoBehaviour
     public AudioClip audio_creepyBreathing;
     public AudioClip audio_PizzaTime;
     public Text ui_FlashlightHint;
-
     #endregion
 
     #region Unity Events
-    private void OnEnable()
+    IEnumerator WaitOnPathManager()
     {
-        pathManager.Log("SadisticAI: SadisticAI: Starting...");
-        //scares.sadisticAI = GetComponent<SadisticAI>();
-        InvokeRepeating("AiThink", 0f, aiThinkingTime);
-        debug = pathManager.debug;
-        interact_Phone_01.GetComponent<Telephone>().pathManager = pathManager;
+        ulong tics = 0;
+        while (!pathManager.loaded)
+        {
+            if (debug) playerController.Log("Waiting for PathManager to start... (" + tics + "tics)");
+            yield return new WaitForSeconds(1);
+            tics++;
+        }
+        StartAI();
+    }
 
-        StartCoroutine(playerController.ShowHint("I have to get out of here, now."));
-
-        //Handle Triggers
-        trigger_FrontDoor_01.TriggerEvent.AddListener(Trigger_FrontDoor_01_Event);
-        trigger_Table_01.TriggerEvent.AddListener(Trigger_Table_01_Event);
-        trigger_ExtraDoor_01.TriggerEvent.AddListener(Trigger_ExtraDoor_01_Event);
-
-        trigger_FrontDoor_02.TriggerEvent.AddListener(Trigger_FrontDoor_02_Event);
-        trigger_Table_02.TriggerEvent.AddListener(Trigger_Table_02_Event);
-        trigger_ExtraDoor_02.TriggerEvent.AddListener(Trigger_ExtraDoor_02_Event);
+    private void Start()
+    {
+        status = "Loading";
+        StartCoroutine(WaitOnPathManager());
     }
 
     // Update is called once per frame
     void Update()
     {
-        //Observe Player loops and current Path
-        playerLoops = pathManager.playerLoops;
-        currentPath = pathManager.currentPath;
-    }
+        if (pathManager.loaded)
+        {
 
+            //Observe Player loops and current Path
+            playerLoops = pathManager.playerLoops;
+        }
+    }
     #endregion
 
-    #region AI Thinking Handler
+    #region AI Functions
+    void StartAI()
+    {
+        pathManager = GetComponent<PathManager>();
+        playerController.Log("S_AI: Starting...");
+        //scares.sadisticAI = GetComponent<SadisticAI>();
+        InvokeRepeating("AiThink", 0f, aiThinkingTime);
+        debug = pathManager.debug;
+        interact_Phone.GetComponent<Telephone>().pathManager = pathManager;
+
+        StartCoroutine(playerController.ShowHint("\"I have to get out of here, now.\""));
+
+        interact_FrontDoor = pathManager.Interactables.transform.Find("Front_Door").gameObject;
+
+        interact_ExtraDoor_01 = pathManager.Interactables.transform.Find("Extra_Door_01").gameObject;
+        interact_ExtraDoor_02 = pathManager.Interactables.transform.Find("Extra_Door_02").gameObject;
+        interact_ExtraDoor_03 = pathManager.Interactables.transform.Find("Extra_Door_03").gameObject;
+        interact_ExtraDoor_04 = pathManager.Interactables.transform.Find("Extra_Door_04").gameObject;
+
+        interact_Phone = pathManager.Interactables.transform.Find("Telephone").gameObject;
+
+        pathManager.firstPath.transform.Find("trigger_FrontDoor").gameObject.GetComponent<PathTrigger>().TriggerEvent.AddListener(Trigger_FrontDoor_Event);
+        pathManager.firstPath.transform.Find("trigger_Table").gameObject.GetComponent<PathTrigger>().TriggerEvent.AddListener(Trigger_Table_Event);
+        pathManager.firstPath.transform.Find("trigger_ExtraDoor").gameObject.GetComponent<PathTrigger>().TriggerEvent.AddListener(Trigger_ExtraDoor_Event);
+
+        //Get Lights
+        foreach (Transform light in pathManager.firstPath.transform.Find("Lights"))
+        {
+            interact_CeilingLights.Add(light.gameObject);
+        }
+
+        pathManager.EnterDoor.GetComponent<DoorController>().forceOpen = true;
+        status = "Active";
+    }
+
     void AiThink()
     {
-        if (debug) pathManager.Log("SadisticAI: Player Loops: " + playerLoops + " Players Current Path: " + currentPath);
-        if (playerLoops < 2 || pathManager.preventProgress)
+        if (debug) playerController.Log("S_AI: Player Loops: " + playerLoops);
+        if (playerLoops < 2 || pathManager.preventProgress || pathManager.progressingPath)
         {
-            if (debug) pathManager.Log("Either player is below 2 loops or preventProgress it true, doing nothing.");
+            if (debug) playerController.Log("S_AI: Either player is below 2 loops, the player has progressed path or preventProgress it true, doing nothing.");
             return;
-        }
-        if (!debug)
-        {
-            if (random.Next(1, 100) / playerLoops < cruelty)
-            {
-                ScareHandler();
-            }
         }
         else
         {
-            pathManager.Log("SadisticAI: Calculating activity...");
-            int rndNumber = random.Next(1, 100);
-            pathManager.Log("SadisticAI: Random Number: " + rndNumber);
+            thinking = true;
+            status = "Thinking...";
+            if (debug) playerController.Log("S_AI: Calculating activity...");
+            int rndNumber = RollDice("activity random", 3, 100);
+            if (debug) playerController.Log("S_AI: Random Number: " + rndNumber);
 
             float rndWithLoops = rndNumber / playerLoops;
-            pathManager.Log("SadisticAI: Random Divided by Loops: " + rndWithLoops);
+            if (debug) playerController.Log("S_AI: Random Divided by Loops: " + rndWithLoops);
 
-            pathManager.Log("SadisticAI: Will AI Act: ( Is number \"" + rndWithLoops + "\" less than cruelty \"" + cruelty + "\"");
+            if (debug) playerController.Log("S_AI: Will AI Act: ( Is number \"" + rndWithLoops + "\" less than activity \"" + activity + "\"");
 
-            if (rndWithLoops < cruelty && rndWithLoops != 0)
+            if (rndWithLoops < activity && rndWithLoops != 0)
             {
-                pathManager.Log("SadisticAI: Yes. Time to make this fun...");
-                ScareHandler();
+                if (debug) playerController.Log("S_AI: Yes. Time to make this fun...");
+                if (danger < 50) //Scare the player, no danger.
+                {
+                    if (debug) playerController.Log("S_AI: I will scare the player.");
+                    ScareHandler();
+                }
+                else
+                {
+                    if (debug) playerController.Log("S_AI: I will attempt to hurt the player.");
+                    playerController.TakeDamage(RollDice("hurt player", 10, 20));
+
+                    danger = 0;
+                }
             }
-            else pathManager.Log("SadisticAI: No. Remaining idle, for now...");
+            else if (debug) playerController.Log("S_AI: No. Remaining idle, for now...");
+            thinking = false;
+            status = "Active";
         }
     }
     #endregion
 
     #region Scare Handler
+    List<Scare> scares = null;
+    List<Scare> ScareCompilier()
+    {
+        if (debug) playerController.Log("S_AI: Compiling scares...");
+        // Here we create and compile all the available scares
+        List<Scare> scares = new List<Scare>()
+        {
+            new Scare()
+            {
+            id = 0,
+            name = "BurstLight",
+            method = BurstLight,
+            },
+            new Scare()
+            {
+            id = 1,
+            name = "PhoneRing",
+            method = PhoneRing,
+            },
+            new Scare()
+            {
+            id = 2,
+            name = "KnockKnock",
+            method = KnockKnock,
+            },
+            new Scare()
+            {
+            id = 3,
+            name = "SwingChandiler",
+            method = SwingChandiler,
+            },
+            new Scare()
+            {
+            id = 4,
+            name = "RandomRoom",
+            method = RandomRoom,
+            }
+        };
+
+        if (debug)
+        {
+            foreach (Scare scare in scares)
+            {
+                playerController.Log("S_AI: Compiled scare: \"" + scare.name + "\" ID: \"" + scare.id + "\"");
+            }
+        }
+
+        return scares;
+    }
+
+    int RollDice(string title, int minValue, int maxValue)
+    {
+        if (debug) playerController.Log("S_AI: Rolling the dice for \"" + title +  "\" (" + minValue + "-" + maxValue + ")");
+        random = new System.Random();
+        int result = random.Next(minValue, maxValue);
+        if (debug) playerController.Log("S_AI: Dice landed: " + result);
+        return result;
+    }
+
     void ScareHandler()
     {
-        if (debug) pathManager.Log("SadisticAI: Deciding how to scare the player...");
-        if (trigger_FrontDoor_01_Active) // Do something near the front door (Path 1)
-        {
-            if (debug) pathManager.Log("SadisticAI: Doing something near the front door...");
-            KnockKnock(interact_FrontDoor_01);
-        }
-        else if (trigger_Table_01_Active) // Do something near the table (Path 1)
-        {
-            if (debug) pathManager.Log("SadisticAI: Doing something near the table...");
-            PhoneRing();
-        }
-        else if (trigger_ExtraDoor_01_Active)// Do something near the Extra door (Path 1)
-        {
-            if (debug) pathManager.Log("SadisticAI: Doing something near the Extra door...");
-            KnockKnock(interact_ExtraDoor_01);
-        }
-        else if (trigger_FrontDoor_02_Active) // Do something near the front door (Path 2)
-        {
-            if (debug) pathManager.Log("SadisticAI: Doing something near the front door (Path 2)...");
-            KnockKnock(interact_FrontDoor_02);
-        }
-        else if (trigger_Table_02_Active) // Do something near the table (Path 2)
-        {
-            if (debug) pathManager.Log("SadisticAI: Doing something near the table (Path 2)...");
-            PhoneRing();
-        }
-        else if (trigger_ExtraDoor_02_Active)
-        {
-            if (debug) pathManager.Log("SadisticAI: Doing something near the Extra door...");
-            KnockKnock(interact_ExtraDoor_02);
+        if (scares == null ) scares = ScareCompilier();
 
-        }
-        else // Do something else anywhere
+        if (debug) playerController.Log("S_AI: Deciding how to scare the player...");
+        if (trigger_Enter_Active)
         {
-            if (currentPath == 1)
+            switch (RollDice("scares", 1, 5))
             {
-                if (debug) pathManager.Log("SadisticAI: Doing something somewhere... (Path 1)");
-
-                TurnOffLights();
-            }
-            else
-            {
-                if (debug) pathManager.Log("SadisticAI: Doing something somewhere... (Path 2)");
-                TurnOffLights();
+                case 1: scares[0].method.Invoke(); break;
+                case 2: scares[1].method.Invoke(); break;
+                case 3: scares[2].method.Invoke(); break;
+                case 4: scares[3].method.Invoke(); break;
+                case 5: scares[4].method.Invoke(); break;
             }
         }
+        else if (trigger_FrontDoor_Active)
+        {
+            if (debug) playerController.Log("S_AI: Doing something near the front door...");
+            switch (RollDice("scares", 1, 4))
+            {
+                case 1: scares[0].method.Invoke(); break;
+                case 2: scares[1].method.Invoke(); break;
+                case 3: scares[2].method.Invoke(); break;
+                case 4: scares[4].method.Invoke(); break;
+            }
+        }
+        else if (trigger_Table_Active)
+        {
+            if (debug) playerController.Log("S_AI: Doing something near the table...");
+            switch (RollDice("scares", 1, 3))
+            {
+                case 1: scares[0].method.Invoke(); break;
+                case 2: scares[1].method.Invoke(); break;
+                case 3: scares[4].method.Invoke(); break;
+            }
+        }
+        else if (trigger_ExtraDoor_Active)
+        {
+            if (debug) playerController.Log("S_AI: Doing something near the Extra door...");
+            switch (RollDice("scares", 1, 5))
+            {
+                case 1: scares[0].method.Invoke(); break;
+                case 2: scares[1].method.Invoke(); break;
+                case 3: scares[2].method.Invoke(); break;
+                case 4: scares[3].method.Invoke(); break;
+                case 5: scares[4].method.Invoke(); break;
+            }
+        }
+        else
+        {
+            switch (RollDice("scares", 1, 4))
+            {
+                case 1: scares[0].method.Invoke(); break;
+                case 2: scares[1].method.Invoke(); break;
+                case 3: scares[2].method.Invoke(); break;
+                case 4: scares[4].method.Invoke(); break;
+            }
+        }
+        danger = danger + (cruelty * RollDice("danger multiplier", cruelty + 2,8));
     }
     #endregion
-
     #region Scares
-    bool lightsOff = false;
-    public void TurnOffLights()
+    public void BurstLight()
     {
+        List<GameObject> lights = new List<GameObject>();
+
+        foreach (GameObject _tmpLight in interact_CeilingLights)
+        {
+            if (_tmpLight.name.Contains("Ceiling Light"))
+            {
+                if (!_tmpLight.GetComponent<CeilingLights>().burst)
+                {
+                    lights.Add(_tmpLight);
+                }
+            }
+            else if (_tmpLight.name.Contains("Chandiler"))
+            {
+                if (!_tmpLight.GetComponent<Chandiler>().burst)
+                {
+                    lights.Add(_tmpLight);
+                }
+            }
+        }
+
         if (!playerController.canUseFlashlight)
         {
             playerController.canUseFlashlight = true;
-            StartCoroutine(playerController.ShowHint("Press F for flashlight"));
+            StartCoroutine(playerController.ShowHint("(Press F for flashlight)"));
         }
-        if (debug) pathManager.Log("Bursting a Light...");
 
-        List<GameObject> lights = new List<GameObject>();
-
-        foreach (GameObject _tmpLight in interact_CeilingLights_01)
+        if (lights.Count == 0)
         {
-            if (!_tmpLight.GetComponent<CeilingLights>().burst)
+            if (debug) playerController.Log("S_AI: No lights to burst");
+        }
+        else
+        {
+            GameObject lightToBurst = lights[RollDice("light to burst", 0, lights.Count)];
+
+            if (lightToBurst.name.Contains("Ceiling Light"))
             {
-                lights.Add(_tmpLight);
+                lightToBurst.GetComponent<CeilingLights>().shouldBurst = true;
+            }
+            else if (lightToBurst.name.Contains("Chandiler"))
+            {
+                lightToBurst.GetComponent<Chandiler>().shouldBurst = true;
             }
         }
-
-        int choosenLight = random.Next(0, lights.Count);
-
-        Tuple<GameObject, GameObject> lightsToBurst =
-            new Tuple<GameObject, GameObject>(
-                interact_CeilingLights_01[choosenLight],
-                interact_CeilingLights_02[choosenLight]
-                );
-
-        lightsToBurst.Item1.GetComponent<CeilingLights>().shouldBurst = true;
-        lightsToBurst.Item2.GetComponent<CeilingLights>().shouldBurst = true;
     }
 
     public void PhoneRing()
     {
+        interact_Phone.GetComponent<Telephone>().shouldRing = true;
+        interact_Phone.GetComponent<Telephone>().callSound = audio_creepyBreathing;
+        StartCoroutine(playerController.ShowHint("\"What the fuck, is that a phone ringing?\""));
+    }
+
+    public void KnockKnock()
+    {
+        if (trigger_FrontDoor_Active)
+        {
+            interact_FrontDoor.GetComponent<AudioSource>().Play();
+        }
+        else if (trigger_ExtraDoor_Active)
+        {
+            interact_ExtraDoor_01.GetComponent<AudioSource>().Play();
+        }
+        else if (trigger_Enter_Active)
+        {
+            pathManager.EnterDoor.GetComponent<AudioSource>().Play();
+        }
+    }
+
+    public void SwingChandiler()
+    {
+        foreach (GameObject _tmpLight in interact_CeilingLights)
+        {
+            if (_tmpLight.gameObject.name.Contains("Chandiler"))
+            {
+                _tmpLight.GetComponent<Chandiler>().shouldSwing = true;
+            }
+        }
+    }
+    GameObject choosenDoor;
+    public void RandomRoom()
+    {
         pathManager.preventProgress = true;
-        if (currentPath == 1)
+        List<GameObject> doors = new List<GameObject>()
         {
-            interact_Phone_01.GetComponent<Telephone>().shouldRing = true;
-            interact_Phone_01.GetComponent<Telephone>().callSound = audio_creepyBreathing;
-            StartCoroutine(playerController.ShowHint("what the fuck, is that a phone ringing?"));
-        }
-        else
-        {
-            interact_Phone_02.GetComponent<Telephone>().shouldRing = true;
-            interact_Phone_02.GetComponent<Telephone>().callSound = audio_creepyBreathing;
-            StartCoroutine(playerController.ShowHint("what the fuck, is that a phone ringing?"));
-        }
+            pathManager.ExitDoor,
+            interact_ExtraDoor_01,
+            interact_ExtraDoor_03,
+        };
+
+        choosenDoor = doors[RollDice("choosen door", 0, doors.Count)];
+
+        Vector3 newPosition = new Vector3(-40,0);
+        Quaternion newRotation = new Quaternion();
+
+        interact_CurrentExtraRoom = Instantiate(interact_ExtraRooms[RollDice("extra room", 0, interact_ExtraRooms.Count)]);
+
+        interact_CurrentExtraRoom.transform.parent = pathManager.currentPath.transform.Find("AI_Interactables");
+        interact_CurrentExtraRoom.transform.position = choosenDoor.transform.position;
+        interact_CurrentExtraRoom.transform.rotation = choosenDoor.transform.rotation;
+
+        choosenDoor.GetComponent<DoorController>().forceOpen = true;
+    }
+
+    public void DestroyExtraRoom()
+    {
+        choosenDoor.GetComponent<DoorController>().forceClose = true;
+        Destroy(interact_CurrentExtraRoom);
+        interact_CurrentExtraRoom = null;
+        pathManager.preventProgress = false;
     }
 
     public void ShadowWalkBy()
-    { 
-        if (currentPath == 1)
-        {
-            interact_ShadowWalkby_01.GetComponent<MeshRenderer>().enabled = true;
-        }
-        else
-        {
-
-        }
-    }
-
-    public void KnockKnock(GameObject door)
     {
-        door.GetComponent<AudioSource>().Play();
+
     }
     #endregion
 
     #region Trigger Handlers
-    #region Path 1
-    void Trigger_FrontDoor_01_Event(Collider collider)
+    public void Trigger_FrontDoor_Event(Collider collider)
     {
         if (collider == null)
         {
-            trigger_FrontDoor_01_Active = false;
-            if (debug) pathManager.Log("SadisticAI: Player left FrontDoor Trigger. (Path 1)");
+            trigger_FrontDoor_Active = false;
+            if (triggerDebug) playerController.Log("S_AI: Player left FrontDoor Trigger.");
 
         }
         else if (collider.gameObject.tag == "Player")
         {
-            trigger_FrontDoor_01_Active = true;
-            if (debug) pathManager.Log("SadisticAI: Player entered FrontDoor Trigger. (Path 1)");
+            trigger_FrontDoor_Active = true;
+            if (triggerDebug) playerController.Log("S_AI: Player entered FrontDoor Trigger.");
 
         }
     }
-    void Trigger_Table_01_Event(Collider collider)
+    public void Trigger_Table_Event(Collider collider)
     {
         if (collider == null)
         {
-            trigger_Table_01_Active = false;
-            if (debug) pathManager.Log("SadisticAI: Player left Table Trigger. (Path 1)");
+            trigger_Table_Active = false;
+            if (triggerDebug) playerController.Log("S_AI: Player left Table Trigger.");
         }
         else if (collider.gameObject.tag == "Player")
         {
-            trigger_Table_01_Active = true;
-            if (debug) pathManager.Log("SadisticAI: Player entered Table Trigger. (Path 1)");
+            trigger_Table_Active = true;
+            if (triggerDebug) playerController.Log("S_AI: Player entered Table Trigger.");
         }
     }
-    void Trigger_ExtraDoor_01_Event(Collider collider)
+    public void Trigger_ExtraDoor_Event(Collider collider)
     {
         if (collider == null)
         {
-            trigger_ExtraDoor_01_Active = false;
-            if (debug) pathManager.Log("SadisticAI: Player left ExtraDoor Trigger. (Path 1)");
-
-        }
-        else if (collider.gameObject.tag == "Player")
-        {
-            trigger_ExtraDoor_01_Active = true;
-            if (debug) pathManager.Log("SadisticAI: Player entered ExtraDoor Trigger. (Path 1)");
-
-        }
-    }
-    #endregion
-    #region Path 2
-    void Trigger_FrontDoor_02_Event(Collider collider)
-    {
-        if (collider == null)
-        {
-            trigger_FrontDoor_02_Active = false;
-            if (debug) pathManager.Log("SadisticAI: Player left FrontDoor Trigger. (Path 2)");
+            trigger_ExtraDoor_Active = false;
+            if (triggerDebug) playerController.Log("S_AI: Player left ExtraDoor Trigger.");
 
         }
         else if (collider.gameObject.tag == "Player")
         {
-            trigger_FrontDoor_02_Active = true;
-            if (debug) pathManager.Log("SadisticAI: Player entered FrontDoor Trigger. (Path 2)");
+            trigger_ExtraDoor_Active = true;
+            if (triggerDebug) playerController.Log("S_AI: Player entered ExtraDoor Trigger.");
 
         }
     }
-    void Trigger_Table_02_Event(Collider collider)
-    {
-        if (collider == null)
-        {
-            trigger_Table_02_Active = false;
-            if (debug) pathManager.Log("SadisticAI: Player left Table Trigger. (Path 2)");
-        }
-        else if (collider.gameObject.tag == "Player")
-        {
-            trigger_Table_02_Active = true;
-            if (debug) pathManager.Log("SadisticAI: Player entered Table Trigger. (Path 2)");
-        }
-    }
-    void Trigger_ExtraDoor_02_Event(Collider collider)
-    {
-        if (collider == null)
-        {
-            trigger_ExtraDoor_02_Active = false;
-            if (debug) pathManager.Log("SadisticAI: Player left ExtraDoor Trigger. (Path 2)");
-
-        }
-        else if (collider.gameObject.tag == "Player")
-        {
-            trigger_ExtraDoor_02_Active = true;
-            if (debug) pathManager.Log("SadisticAI: Player entered ExtraDoor Trigger. (Path 2)");
-
-        }
-    }
-    #endregion
     #endregion
 }

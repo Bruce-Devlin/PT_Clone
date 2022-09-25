@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4877353346366464095}
   - component: {fileID: 7406138825328664202}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Wood_Floor_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -58,7 +58,7 @@ GameObject:
   - component: {fileID: 7309986441044337635}
   - component: {fileID: 2228693760117483093}
   - component: {fileID: 6603482054132475613}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}

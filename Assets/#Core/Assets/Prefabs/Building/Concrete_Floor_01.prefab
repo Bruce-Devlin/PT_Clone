@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5902720707086671068}
   - component: {fileID: 1225450776952059029}
   - component: {fileID: 3275163231816242773}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -105,7 +105,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1384284555637264744}
   - component: {fileID: 2028665613738109805}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Concrete_Floor_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

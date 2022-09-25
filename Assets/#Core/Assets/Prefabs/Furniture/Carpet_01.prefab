@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6178476850423703732}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Carpet_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -85,6 +85,14 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: d0269c94695ad6743b7820281b476e8e, type: 3}
       propertyPath: m_Name
       value: Carpet_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: d0269c94695ad6743b7820281b476e8e, type: 3}
+      propertyPath: m_Layer
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 6110682920482258829, guid: d0269c94695ad6743b7820281b476e8e, type: 3}
+      propertyPath: m_Layer
+      value: 10
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d0269c94695ad6743b7820281b476e8e, type: 3}

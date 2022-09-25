@@ -256,6 +256,7 @@ Transform:
   - {fileID: 8697299952948474442}
   - {fileID: 8697299954659674527}
   - {fileID: 866271874922059002}
+  - {fileID: 6962317917315860462}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1129,4 +1130,66 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 5944230650583585852, guid: ff0e9b1d160be1640805c0303db00dd9, type: 3}
   m_PrefabInstance: {fileID: 3084159194979755638}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &3330370638095041409
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 3084159193938218338}
+    m_Modifications:
+    - target: {fileID: 2824733042176257470, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_Name
+      value: Beige-Concrete_Door_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_RootOrder
+      value: 13
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -8.082
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 3.26
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -2.7129993
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+--- !u!4 &6962317917315860462 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5667996946446992495, guid: 1afa293530ed13f4eb095b7d316f0752, type: 3}
+  m_PrefabInstance: {fileID: 3330370638095041409}
   m_PrefabAsset: {fileID: 0}
