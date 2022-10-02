@@ -134,5 +134,24 @@ public class MenuController : MonoBehaviour
         }
     }
 
+    public void OnQualityChange()
+    {
+        Dropdown dropdown = settingsCanvas.transform.Find("Quality").GetComponent<Dropdown>();
+        Dropdown.OptionData selectedOption = dropdown.options[dropdown.value];
+
+        if (selectedOption.text == "High")
+        {
+            PlayerPrefs.SetString("Quality", "high");
+        }
+        else if (selectedOption.text == "Medium")
+        {
+            PlayerPrefs.SetString("Quality", "medium");
+        }
+        else if (selectedOption.text == "Low")
+        {
+            PlayerPrefs.SetString("Quality", "low");
+        }
+    }
+
     #endregion
 }

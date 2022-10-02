@@ -37,8 +37,11 @@ public class PlayerController : MonoBehaviour
 
     public bool canSprint = true;
 
-    public float movementSpeed = 5.0f;
-    private float tmp_MovementSpeed;
+    public float movementSpeed;
+    private float sprintSpeed;
+    private float currMovementSpeed;
+
+    public float MaximumVelocity = 1f;
 
     public bool moving = false;
     public bool sprinting = false;
@@ -56,6 +59,7 @@ public class PlayerController : MonoBehaviour
     float sensitivityX;
     float sensitivityY;
     string cameraMovement = "";
+    string quality = "";
 
     public float minimumX = -360F;
     public float maximumX = 360F;
@@ -103,33 +107,44 @@ public class PlayerController : MonoBehaviour
 
     public AudioClip PickRandomFootstep()
     {
-        int v = sadisticAI.random.Next(0, _clips.Length);
-        return _clips[v];
+        //int v = sadisticAI. (0, _clips.Length);
+        return _clips[1];
     }
     #endregion
 
     #region Unity Methods
+    private void OnEnable()
+    {
+        cameraMovement = PlayerPrefs.GetString("CameraMovement");
+        sensitivityX = PlayerPrefs.GetFloat("Sensitivity");
+        quality = PlayerPrefs.GetString("Quality");
+
+        if (quality == "high")
+        {
+            QualitySettings.SetQualityLevel(0, true);
+        }
+        else if (quality == "medium")
+        {
+            QualitySettings.SetQualityLevel(1, true);
+        }
+        if (quality == "high")
+        {
+            QualitySettings.SetQualityLevel(2, true);
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
         debugStatsUI = userInterface.transform.Find("DebugStats").gameObject;
         if (debugStatsUI.active && !debugStats) debugStatsUI.SetActive(false);
 
-        if (canLook)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            cameraMovement = PlayerPrefs.GetString("CameraMovement");
-            sensitivityX = PlayerPrefs.GetFloat("Sensitivity");
-        }
+        if (canLook) Cursor.lockState = CursorLockMode.Locked;
 
-        // Make the rigid body not change rotation
-        if (GetComponent<Rigidbody>())
-            GetComponent<Rigidbody>().freezeRotation = true;
         playerFlashlight.transform.Find("Bulb").GetComponent<Light>().enabled = false;
         playerFlashlight.SetActive(false);
 
         distToGround = playerBody.GetComponent<CapsuleCollider>().bounds.extents.y;
-        tmp_MovementSpeed = movementSpeed;
 
         StartCoroutine(Blinking());
     }
@@ -143,7 +158,8 @@ public class PlayerController : MonoBehaviour
             rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
             rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
 
-            rotationX += Input.GetAxis("Mouse X") * sensitivityX / 2;
+            rotationX += Input.GetAxis("Mouse X") * sensitivityX;
+            //Debug.Log("X: " + sensitivityX + " \\ " + rotationX + " | Y: " + sensitivityY + " \\ " + rotationY);
 
             #region Realist camera movement
             if (cameraMovement == "real")
@@ -156,11 +172,10 @@ public class PlayerController : MonoBehaviour
                             Mathf.LerpAngle(
                                     playerCamera.transform.eulerAngles.x,
                                     -rotationY,
-                                    sensitivityY * Time.deltaTime
+                                    sensitivityY * 5 * Time.deltaTime
                                 ),
                             rotationX,
-                            0
-                            );
+                            0);
                     playerCamera.eulerAngles = lerpRotateY;
                 }
 
@@ -173,7 +188,7 @@ public class PlayerController : MonoBehaviour
                             Mathf.LerpAngle(
                                 transform.eulerAngles.y,
                                 rotationX,
-                                sensitivityX * Time.deltaTime
+                                sensitivityX * 5 * Time.deltaTime
                                 ),
                             0);
                     transform.eulerAngles = lerpRotateX;
@@ -244,30 +259,31 @@ public class PlayerController : MonoBehaviour
         #endregion
 
         #region Player Movement Controls
-        else if (canMove && isGrounded())
+        sprintSpeed = movementSpeed * 2;
+        if (canMove && isGrounded())
         {
             if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
             {
                 sprinting = true;
-                movementSpeed = tmp_MovementSpeed + 2;
+                currMovementSpeed = sprintSpeed;
             }
             else
             {
                 sprinting = false;
-                movementSpeed = tmp_MovementSpeed;
+                currMovementSpeed = movementSpeed;
             }
 
             if (Input.GetKey(KeyCode.W))
             {
                 moving = true;
-                transform.Translate(Vector3.forward * Time.deltaTime * movementSpeed);
+                GetComponent<Rigidbody>().AddForce(transform.forward * currMovementSpeed, ForceMode.Acceleration);
             }
             else moving = false;
 
             if (Input.GetKey(KeyCode.A))
             {
                 moving = true;
-                transform.Translate(Vector3.left * Time.deltaTime * (movementSpeed / 2));
+                GetComponent<Rigidbody>().AddForce(-transform.right * currMovementSpeed, ForceMode.Acceleration);
             }
             else moving = false;
 
@@ -275,8 +291,7 @@ public class PlayerController : MonoBehaviour
             if (Input.GetKey(KeyCode.S))
             {
                 moving = true;
-
-                transform.Translate(-1 * Vector3.forward * Time.deltaTime * movementSpeed);
+                GetComponent<Rigidbody>().AddForce(-1 * transform.forward * currMovementSpeed, ForceMode.Acceleration);
             }
             else moving = false;
 
@@ -284,11 +299,19 @@ public class PlayerController : MonoBehaviour
             if (Input.GetKey(KeyCode.D))
             {
                 moving = true;
-                transform.Translate(Vector3.right * Time.deltaTime * (movementSpeed / 2));
+                GetComponent<Rigidbody>().AddForce(transform.right * currMovementSpeed, ForceMode.Acceleration);
+
             }
             else moving = false;
 
-        }
+            float tmpMaxVolocity = MaximumVelocity;
+
+            if (sprinting) tmpMaxVolocity *= 2;
+
+            GetComponent<Rigidbody>().velocity = new Vector3(Mathf.Clamp(GetComponent<Rigidbody>().velocity.x, -tmpMaxVolocity, tmpMaxVolocity),
+                              GetComponent<Rigidbody>().velocity.y,
+                              Mathf.Clamp(GetComponent<Rigidbody>().velocity.z, -tmpMaxVolocity, tmpMaxVolocity));
+    }
         #endregion
     }
 
@@ -433,7 +456,6 @@ public class PlayerController : MonoBehaviour
     {
         while (true)
         {
-            random = new System.Random();
             if (!eyesClosed && canBlink)
             {
                 canCloseEyes = false;
@@ -445,7 +467,8 @@ public class PlayerController : MonoBehaviour
                 playerCamera.GetComponent<Camera>().nearClipPlane = 0.01f;
                 canCloseEyes = true;
             }
-            yield return new WaitForSeconds(random.Next(0, blinkInterval));
+
+            yield return new WaitForSeconds(SadisticAI.RollDice("blinking", 0, blinkInterval));
         } 
     }
 
@@ -482,10 +505,16 @@ public class PlayerController : MonoBehaviour
         else fpsTxt.color = Color.green;
 
         //System Runtime
-        TimeSpan time = TimeSpan.FromSeconds(Time.realtimeSinceStartupAsDouble);
+        TimeSpan runtime = pathManager.runtime.Elapsed;
 
         Text runtimeTxt = debugStatsUI.transform.Find("System_Runtime").GetComponent<Text>();
-        runtimeTxt.text = time.ToString();
+        runtimeTxt.text = runtime.ToString();
+
+        //System Looptime
+        TimeSpan looptime = pathManager.looptime.Elapsed;
+
+        Text looptimeTxt = debugStatsUI.transform.Find("System_Looptime").GetComponent<Text>();
+        looptimeTxt.text = looptime.ToString();
 
         //Sadistic AI
         string s_AIStatus = sadisticAI.status;

@@ -23,7 +23,7 @@ public class SadisticAI : MonoBehaviour
 
     // The Scene PathManager.
     [HideInInspector]public PathManager pathManager;
-    bool debug;
+    public static bool debug;
     [HideInInspector]public string status = "";
     public bool triggerDebug = false;
 
@@ -55,7 +55,7 @@ public class SadisticAI : MonoBehaviour
     public int aiThinkingTime = 30;
 
     // Random generator used to make things random.
-    public System.Random random;
+    public static System.Random random;
 
     public bool thinking = false;
 
@@ -248,7 +248,14 @@ public class SadisticAI : MonoBehaviour
             id = 4,
             name = "RandomRoom",
             method = RandomRoom,
+            },
+            new Scare()
+            {
+            id = 5,
+            name = "FlickerLight",
+            method = FlickerLight,
             }
+
         };
 
         if (debug)
@@ -262,12 +269,12 @@ public class SadisticAI : MonoBehaviour
         return scares;
     }
 
-    int RollDice(string title, int minValue, int maxValue)
+    public static int RollDice(string title, int minValue, int maxValue)
     {
-        if (debug) playerController.Log("S_AI: Rolling the dice for \"" + title +  "\" (" + minValue + "-" + maxValue + ")");
+        if (debug) Debug.Log("S_AI: Rolling the dice for \"" + title +  "\" (" + minValue + "-" + maxValue + ")");
         random = new System.Random();
         int result = random.Next(minValue, maxValue);
-        if (debug) playerController.Log("S_AI: Dice landed: " + result);
+        if (debug) Debug.Log("S_AI: Dice landed: " + result);
         return result;
     }
 
@@ -278,7 +285,7 @@ public class SadisticAI : MonoBehaviour
         if (debug) playerController.Log("S_AI: Deciding how to scare the player...");
         if (trigger_Enter_Active)
         {
-            switch (RollDice("scares", 1, 5))
+            switch (RollDice("scares", 1, 3))
             {
                 case 1: scares[0].method.Invoke(); break;
                 case 2: scares[1].method.Invoke(); break;
@@ -290,44 +297,50 @@ public class SadisticAI : MonoBehaviour
         else if (trigger_FrontDoor_Active)
         {
             if (debug) playerController.Log("S_AI: Doing something near the front door...");
-            switch (RollDice("scares", 1, 4))
+            switch (RollDice("scares", 1, 3))
             {
                 case 1: scares[0].method.Invoke(); break;
                 case 2: scares[1].method.Invoke(); break;
                 case 3: scares[2].method.Invoke(); break;
                 case 4: scares[4].method.Invoke(); break;
+                case 5: scares[5].method.Invoke(); break;
             }
         }
         else if (trigger_Table_Active)
         {
             if (debug) playerController.Log("S_AI: Doing something near the table...");
-            switch (RollDice("scares", 1, 3))
+            switch (RollDice("scares", 1, 2))
             {
                 case 1: scares[0].method.Invoke(); break;
                 case 2: scares[1].method.Invoke(); break;
                 case 3: scares[4].method.Invoke(); break;
+                case 4: scares[5].method.Invoke(); break;
+
             }
         }
         else if (trigger_ExtraDoor_Active)
         {
             if (debug) playerController.Log("S_AI: Doing something near the Extra door...");
-            switch (RollDice("scares", 1, 5))
+            switch (RollDice("scares", 1, 4))
             {
                 case 1: scares[0].method.Invoke(); break;
                 case 2: scares[1].method.Invoke(); break;
                 case 3: scares[2].method.Invoke(); break;
                 case 4: scares[3].method.Invoke(); break;
                 case 5: scares[4].method.Invoke(); break;
+                case 6: scares[5].method.Invoke(); break;
             }
         }
         else
         {
-            switch (RollDice("scares", 1, 4))
+            switch (RollDice("scares", 1, 3))
             {
                 case 1: scares[0].method.Invoke(); break;
                 case 2: scares[1].method.Invoke(); break;
                 case 3: scares[2].method.Invoke(); break;
                 case 4: scares[4].method.Invoke(); break;
+                case 5: scares[5].method.Invoke(); break;
+
             }
         }
         danger = danger + (cruelty * RollDice("danger multiplier", cruelty + 2,8));
@@ -381,6 +394,33 @@ public class SadisticAI : MonoBehaviour
         }
     }
 
+    public void FlickerLight()
+    {
+        List<GameObject> lights = new List<GameObject>();
+
+        foreach (GameObject _tmpLight in interact_CeilingLights)
+        {
+            if (_tmpLight.name.Contains("Ceiling Light"))
+            {
+                if (!_tmpLight.GetComponent<CeilingLights>().burst)
+                {
+                    lights.Add(_tmpLight);
+                }
+            }
+        }
+
+        if (lights.Count == 0)
+        {
+            if (debug) playerController.Log("S_AI: No lights to flicker");
+        }
+        else
+        {
+            GameObject lightToFlicker = lights[RollDice("light to flicker", 0, lights.Count)];
+
+            lightToFlicker.GetComponent<CeilingLights>().shouldFlicker = true;
+        }
+    }
+
     public void PhoneRing()
     {
         interact_Phone.GetComponent<Telephone>().shouldRing = true;
@@ -420,31 +460,25 @@ public class SadisticAI : MonoBehaviour
         pathManager.preventProgress = true;
         List<GameObject> doors = new List<GameObject>()
         {
+            pathManager.EnterDoor,
             pathManager.ExitDoor,
             interact_ExtraDoor_01,
-            interact_ExtraDoor_03,
+            interact_ExtraDoor_02,
+            interact_ExtraDoor_03
         };
 
         choosenDoor = doors[RollDice("choosen door", 0, doors.Count)];
 
-        Vector3 newPosition = new Vector3(-40,0);
-        Quaternion newRotation = new Quaternion();
+        Vector3 newPosition = choosenDoor.transform.position;
+        Quaternion newRotation = choosenDoor.transform.rotation;
 
-        interact_CurrentExtraRoom = Instantiate(interact_ExtraRooms[RollDice("extra room", 0, interact_ExtraRooms.Count)]);
+        interact_CurrentExtraRoom = Instantiate(interact_ExtraRooms[RollDice("extra room", 0, interact_ExtraRooms.Count)], newPosition, newRotation, pathManager.currentPath.transform.Find("AI_Interactables"));
 
-        interact_CurrentExtraRoom.transform.parent = pathManager.currentPath.transform.Find("AI_Interactables");
-        interact_CurrentExtraRoom.transform.position = choosenDoor.transform.position;
-        interact_CurrentExtraRoom.transform.rotation = choosenDoor.transform.rotation;
+        interact_CurrentExtraRoom.gameObject.GetComponent<ExtraRoom>().pathManager = pathManager;
+        interact_CurrentExtraRoom.gameObject.GetComponent<ExtraRoom>().sadisticAI = this;
+        interact_CurrentExtraRoom.gameObject.GetComponent<ExtraRoom>().door = choosenDoor;
 
-        choosenDoor.GetComponent<DoorController>().forceOpen = true;
-    }
-
-    public void DestroyExtraRoom()
-    {
-        choosenDoor.GetComponent<DoorController>().forceClose = true;
-        Destroy(interact_CurrentExtraRoom);
-        interact_CurrentExtraRoom = null;
-        pathManager.preventProgress = false;
+        choosenDoor.GetComponent<DoorController>().locked = false;
     }
 
     public void ShadowWalkBy()
@@ -452,7 +486,13 @@ public class SadisticAI : MonoBehaviour
 
     }
     #endregion
-
+    public void DestroyExtraRoom()
+    {
+        choosenDoor.GetComponent<DoorController>().forceClose = true;
+        Destroy(interact_CurrentExtraRoom);
+        interact_CurrentExtraRoom = null;
+        pathManager.preventProgress = false;
+    }
     #region Trigger Handlers
     public void Trigger_FrontDoor_Event(Collider collider)
     {

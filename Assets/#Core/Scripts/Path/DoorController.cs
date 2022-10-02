@@ -8,12 +8,25 @@ public class DoorController : MonoBehaviour
     public PathManager pathManager;
     public PlayerController playerController;
     public GameObject door;
+    public bool debug = false;
 
+    public float doorSpeed = 5f;
     public bool forceOpen = false;
     public bool forceClose = false;
     public bool locked = true;
+    private bool unlocked = false;
+    private bool wasLocked = false;
+
+    private AudioSource audio;
+    private bool playing = false;
+    public AudioClip closingAudio;
+    public AudioClip openingAudio;
+    public AudioClip unlockingAudio;
+
 
     [HideInInspector]public bool open = false;
+    private bool moving = false;
+    private Vector3 targetAngle = new Vector3();
 
     Image interact;
 
@@ -21,6 +34,68 @@ public class DoorController : MonoBehaviour
     void Start()
     {
         interact = pathManager.playerController.userInterface.transform.Find("Interact").GetComponent<Image>();
+        audio = door.GetComponent<AudioSource>();
+    }
+
+    void RotateDoor(float angle, bool opening = false, bool closing = false, bool unlocking = false)
+    {
+        if (!playing)
+        {
+            if (opening)
+            {
+                audio.clip = openingAudio;
+                audio.Play();
+            }
+            else if (closing)
+            {
+                audio.clip = closingAudio;
+                audio.Play();
+            }
+            else if (unlocking)
+            {
+                audio.clip = unlockingAudio;
+                audio.Play();
+            }
+            playing = true;
+        }
+
+
+        moving = true;
+        targetAngle = door.transform.localEulerAngles;
+
+        if (debug) playerController.Log("Rotating from: " + targetAngle.y.ToString() + " to: " + angle);
+
+        targetAngle.y = Mathf.LerpAngle(door.transform.localEulerAngles.y, angle, doorSpeed * Time.deltaTime);
+        door.transform.localEulerAngles = targetAngle;
+        if (debug) playerController.Log("Angle: " + door.transform.localEulerAngles.y.ToString());
+
+        if (angle == 1) angle = 0;
+
+        if (targetAngle.y.ToString().StartsWith(angle.ToString()))
+        {
+            if (opening)
+            {
+                open = true;
+                forceOpen = false;
+                unlocked = false;
+            }
+            else if (closing)
+            {
+                open = false;
+                locked = true;
+                forceClose = false;
+                unlocked = false;
+            }
+            else if (unlocking)
+            {
+                locked = false;
+                unlocked = true;
+            }
+            if (debug) playerController.Log("Done moving");
+            moving = false;
+            audio.Stop();
+            playing = false;
+        }
     }
 
     // Update is called once per frame
@@ -28,23 +103,28 @@ public class DoorController : MonoBehaviour
     {
         if (forceOpen && !open)
         {
-            open = true;
-            locked = false;
+            if (debug) playerController.Log("Opening door...");
 
-            door.SetActive(false);
-            forceOpen = false;
-
+            GetComponent<BoxCollider>().enabled = false;
+            RotateDoor(59f, opening: true);
         }
 
-        if (open && (forceClose || locked))
+        if (forceClose && open)
         {
-            open = false;
-            locked = true;
+            if (debug) playerController.Log("Closing door...");
 
-            door.SetActive(true);
-            forceClose = false;
+            GetComponent<BoxCollider>().enabled = true;
+            RotateDoor(179f, closing: true);
         }
-        else forceClose = false;
+
+        if (!locked && !open && !unlocked &&(wasLocked || moving))
+        {
+            if (debug) playerController.Log("Unlocking door...");
+            RotateDoor(160f, unlocking: true);
+        }
+
+        if (!locked && !open && !moving && !unlocked) wasLocked = true;
+        else wasLocked = false;
     }
 
     private void OnMouseEnter()
@@ -63,7 +143,9 @@ public class DoorController : MonoBehaviour
 
     private void OnMouseUp()
     {
-        open = true;
-        door.SetActive(false);
+        if (!moving && !locked)
+        {
+            forceOpen = true;
+        }
     }
 }
