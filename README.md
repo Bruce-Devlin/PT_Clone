@@ -21,11 +21,21 @@ Throughout the path there are triggers that when entered the AI notices and when
 Objects within the world must be interacted with by the AI, these interactables allow the AI to communicate to those objects.
 #### Scares
 These are the functions used to scare the player, usually corrisponding to certain areas of the map.
+This includes:
+- Lights flickering
+- Lights Bursting
+- Phone Ringing
+- Door Knocking
+- Chandiler swinging
+- "Red-room" spawning
+
 #### Dangers
 These are functions desinged to harm the player, ending the experience.
 
 ### Path Manager
 This is the class responsible for manageing the path the player takes, this includes spawning/despawing "path" prefabs based on the player entering/leaving triggers installed on those prefabs.
+
+Each time the player enters a path the manager will determine the exit of the path randomly, randomly generating the path around the player gives the path a random dungeon generator feel.
 ####Triggers
 The Path Manager uses triggers to detect when the player enters and exits the paths, later this will be replaces with interaction. It spawns and despawns the paths based on these triggers.
 ### Player Controller
