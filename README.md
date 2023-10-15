@@ -1,5 +1,5 @@
 # PT-Clone
-![alt text](https://publiczeus.com/devlin/PTIntro.gif "Gameplay")
+[<img src="https://i.ytimg.com/vi/WpXmC12JWu4/maxresdefault.jpg" width="50%">](https://www.youtube.com/watch?v=WpXmC12JWu4 "Sneak Peek - 15 minutes of gameplay")
 
 A Unity Project inspired by the playable teaser for Silent Hills.
 
